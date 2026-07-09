@@ -466,3 +466,19 @@ system_test_nns(
         "@crate_index//:anyhow",
     ],
 )
+
+system_test_nns(
+    name = "bft_small",
+    cpus = MIN_LOCAL_CPUS + 5 * DEFAULT_VCPUS_PER_VM,  # 1 NNS + 4 App nodes, all 6 vCPUs.
+    tags = [
+        "dynamic_testnet",
+        "manual",
+    ],
+    deps = [
+        # Keep sorted.
+        "//rs/registry/subnet_type",
+        "//rs/tests/consensus/utils",
+        "//rs/tests/driver:ic-system-test-driver",
+        "@crate_index//:anyhow",
+    ],
+)
