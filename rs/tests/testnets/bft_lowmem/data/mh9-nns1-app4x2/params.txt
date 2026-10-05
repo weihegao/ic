@@ -1,0 +1,2 @@
+mh9-nns1-app4x2 LOCAL_BACKEND_HOSTS=local=1,ubuntu@172.22.42.61=1,ubuntu@172.22.42.101=1,ubuntu@172.22.42.120=1,ubuntu@172.22.42.183=1,ubuntu@172.22.42.142=1,ubuntu@172.22.42.80=1,ubuntu@172.22.42.246=1,ubuntu@172.22.42.96=1 BFT_NODES=1 BFT_APP_NODES=4 BFT_APP_SUBNETS=2 BFT_MEM_MIB=2048 BFT_VCPUS=2 BFT_INSTALL_NNS=1 BFT_SOAK_UPDATES=50
+TEST_TMPDIR=/home/ubuntu/.cache/bazel/_bazel_ubuntu/6d065581cce7ad9076e3b8db2b3afaf0/execroot/_main/_tmp/4c808d6376e9e0dd7e3b26e62b572b7e

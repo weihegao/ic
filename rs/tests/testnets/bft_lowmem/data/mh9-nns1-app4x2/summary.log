@@ -1,0 +1,26 @@
+2026-10-05 14:28:01.063 INFO[rs/tests/driver/src/driver/local_backend.rs:594:9] Connecting bridge vbr-1ed8556705 to 8 remote host(s) over VXLAN vx-6b3ae7dc6c (VNI 7027431, local 172.22.42.113, guest MTU 1450)
+2026-10-05 14:28:12.306 INFO[setup:rs/tests/testnets/bft_lowmem.rs:75:0] bft_lowmem: system=1 app=2x4 mem=2048MiB vcpus=2 dkg=49 max_state_delta=512MiB install_nns=true
+2026-10-05 14:28:14.835 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM np7nw-aiqhy-teken-x5stv-v3kfp-2d36a-zf7fb-qbi43-c7yxf-e6a4b-yae on ubuntu@172.22.42.61
+2026-10-05 14:28:14.837 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM c35ik-n2pp5-sidle-gw5xj-llm22-fmf7h-jqocc-m5nir-4nf4x-uxf7c-cae on ubuntu@172.22.42.101
+2026-10-05 14:28:14.838 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM my24b-lswlm-wzm47-qm222-s2dxw-3c7jb-a3bht-jybsk-27emz-dk4sz-6qe on ubuntu@172.22.42.120
+2026-10-05 14:28:14.839 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM okgmv-rwevi-sf6vy-ygvyi-5yhc2-rc44e-ghywj-pnkal-nx5vx-xi4my-eae on ubuntu@172.22.42.183
+2026-10-05 14:28:14.841 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM qa2ar-c3rvs-psqlh-efkkx-bp4ke-x7gvy-csluf-mqxxg-74thw-pf5ym-gqe on ubuntu@172.22.42.142
+2026-10-05 14:28:14.842 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM pmsa6-mwe6z-kb7rm-pocw7-fhygc-pwzbc-u7nce-x5ew2-eyqox-uo3dr-cae on ubuntu@172.22.42.80
+2026-10-05 14:28:14.844 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM sfob5-yfbvx-4ulwl-mvwe3-yr6qq-54kkd-qezez-7fqak-soxuc-ibewd-dae on ubuntu@172.22.42.246
+2026-10-05 14:28:14.845 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM iwuqj-zxt3w-vvq6k-rfts3-iexyj-oauye-57bop-54gpf-5jzm5-bmucm-2ae on ubuntu@172.22.42.96
+2026-10-05 14:29:18.468 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.80 after 58.417342761s
+2026-10-05 14:29:31.781 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.183 after 71.73648365s
+2026-10-05 14:29:31.901 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.246 after 72.106616924s
+2026-10-05 14:29:31.960 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.96 after 72.139619563s
+2026-10-05 14:29:39.663 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.61 after 79.705541297s
+2026-10-05 14:29:43.071 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.101 after 83.038384078s
+2026-10-05 14:29:47.333 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.120 after 87.343719691s
+2026-10-05 14:29:50.750 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.142 after 90.760609358s
+2026-10-05 14:32:26.050 INFO[setup:rs/tests/testnets/bft_lowmem.rs:111:0] bft_lowmem: all nodes healthy after 146.609853025s
+2026-10-05 14:33:43.501 INFO[setup:rs/tests/testnets/bft_lowmem.rs:123:0] bft_lowmem: NNS installed after 77.451207639s
+2026-10-05 14:34:34.496 INFO[progress:rs/tests/testnets/bft_lowmem.rs:148:0] bft_lowmem: subnet ahzhe-aet3z-5ggpd-xzgfh-fibe4-pjisu-jjzya-rgeh4-rfknk-vdh7m-2ae (1 nodes): 50 updates in 46.896241909s (938 ms/update)
+2026-10-05 14:34:39.560 INFO[progress:rs/tests/testnets/bft_lowmem.rs:171:0] bft_lowmem: subnet ahzhe-aet3z-5ggpd-xzgfh-fibe4-pjisu-jjzya-rgeh4-rfknk-vdh7m-2ae replicated + progressing
+2026-10-05 14:36:12.362 INFO[progress:rs/tests/testnets/bft_lowmem.rs:148:0] bft_lowmem: subnet pc347-fo6pe-yaaq6-rrd2u-y724e-lovia-5r45c-2mfeb-s2hvy-xpnzt-uqe (4 nodes): 50 updates in 72.272834508s (1445 ms/update)
+2026-10-05 14:36:32.734 INFO[progress:rs/tests/testnets/bft_lowmem.rs:171:0] bft_lowmem: subnet pc347-fo6pe-yaaq6-rrd2u-y724e-lovia-5r45c-2mfeb-s2hvy-xpnzt-uqe replicated + progressing
+2026-10-05 14:37:53.067 INFO[progress:rs/tests/testnets/bft_lowmem.rs:148:0] bft_lowmem: subnet nrltv-6wkc4-ofrj6-wm5vr-inntz-gqgpt-x4ckr-zapit-eylkb-hyypm-tae (4 nodes): 50 updates in 67.172642314s (1343 ms/update)
+2026-10-05 14:38:13.489 INFO[progress:rs/tests/testnets/bft_lowmem.rs:171:0] bft_lowmem: subnet nrltv-6wkc4-ofrj6-wm5vr-inntz-gqgpt-x4ckr-zapit-eylkb-hyypm-tae replicated + progressing

@@ -187,6 +187,20 @@ LOCAL_BACKEND_HOSTS=local=2,ubuntu@172.22.42.113=3[,ubuntu@<ip>=3 ...]
   and kept certifying. There were no OOM kills.
 - Data: `data/mh2-nns1-app4/`.
 
+**Distributed run `mh9-nns1-app4x2`: one node per VM, 9 VMs.**
+- Topology: 1 NNS node + **two 4-node application subnets**, `BFT_APP_SUBNETS=2`.
+- Hosts: driver + NNS node on `ic-worker-1` (8 vCPU / 8 GB, with the build volume). Each application
+  node on its own `flv_dnet106_c04_m04096` VM (4 vCPU / 4 GB), `ic-node-2` … `ic-node-9`:
+  `LOCAL_BACKEND_HOSTS=local=1,ubuntu@<ip2>=1,…,ubuntu@<ip9>=1`.
+- Timeline:
+  - The base image went to the 8 hosts in parallel in 72–90 s each (~12 GB from the driver host).
+  - All 9 nodes were healthy after 147 s, and the NNS installed in 77 s.
+  - 50 updates each: NNS subnet 938 ms, subnet A 1,445 ms, subnet B 1,343 ms per update, all
+    replicated to every node. There were no OOM kills.
+- Per application-node VM: ~1.1 GiB QEMU RSS, ~1.1 cores, 1.5 GiB used / 2.4 GiB free of 3.9 GiB.
+  On the driver VM: NNS node 1.8 GiB, 2.4 GiB used of 7.8.
+- Data: `data/mh9-nns1-app4x2/` (`placement.json`: 9 VMs on 9 hosts).
+
 ## Deploying a canister with icp-cli (proven 2026-10-05)
 
 Goal: use the normal icp-cli workflow, just with a different endpoint. The testnet came from
