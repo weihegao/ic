@@ -486,6 +486,10 @@ system_test_nns(
 system_test_nns(
     name = "bft_lowmem",
     cpus = MIN_LOCAL_CPUS + 4 * 2,  # 4 System nodes @ 2 vCPUs by default (BFT_NODES/BFT_VCPUS).
+    # Boot the published mainnet dev GuestOS instead of building one: the memory
+    # knobs here are registry/VM settings, so no replica change is needed, and this
+    # skips the (large) local GuestOS image build.
+    guestos = "mainnet_latest_dev",
     tags = [
         "dynamic_testnet",
         "manual",
