@@ -600,8 +600,10 @@ impl LocalBackend {
             .iter()
             .map(|ip| format!(" && bridge fdb append 00:00:00:00:00:00 dev {vx} dst {ip}"))
             .collect();
+        // `bridge` lives in /usr/sbin, which the test environment's PATH may lack.
         let script = format!(
-            "ip link del {vx} 2>/dev/null; \
+            "PATH=$PATH:/usr/sbin:/sbin; \
+             ip link del {vx} 2>/dev/null; \
              ip link add {vx} type vxlan id {vni} dstport 4789 local {local_ip}{fdb} && \
              ip link set dev {vx} mtu {mtu} master {bridge} && \
              ip link set dev {vx} up && \
