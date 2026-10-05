@@ -1,0 +1,80 @@
+Warning: Permanently added 'fd00:e090:ba88:0:6801:99ff:fe6f:45f0' (ED25519) to the list of known hosts.
+== yq4f4-myllr-amdyv-cnibr-z55vt-uj3lp-g6mxw-zlkry-hbbsj-3cgv2-nqe ==
+2026-10-05T14:16:02Z
+ 14:16:02 up 5 min,  0 users,  load average: 1.58, 1.02, 0.46
+== free -m ==
+               total        used        free      shared  buff/cache   available
+Mem:            1955         603        1095           1         396        1352
+Swap:             79           0          79
+== meminfo ==
+MemTotal:        2002532 kB
+MemAvailable:    1384640 kB
+Cached:           341800 kB
+SwapTotal:         81916 kB
+SwapFree:          81916 kB
+AnonPages:        316628 kB
+Shmem:              1512 kB
+Slab:              75144 kB
+== top RSS (KiB) ==
+217108   1093 /opt/ic/bin/replica --replica-version=feb8e5f205ad5577b2e11e56a6f94faa2d1c6116 --config-file=/run/ic-node/config/ic.json5 --catch-up-pac
+80616    1004 /opt/ic/bin/ic-crypto-csp --replica-config-file /run/ic-node/config/ic.json5
+28824       1 /sbin/init
+25352    1005 /opt/ic/bin/orchestrator --replica-binary-dir /var/lib/ic/data/images --cup-dir /var/lib/ic/data/cups --replica-config-file /run/ic-node
+24628     351 /usr/lib/systemd/systemd-resolved
+21928     353 /usr/lib/systemd/systemd-udevd
+19192     670 /usr/lib/systemd/systemd-logind
+17676     651 /usr/bin/python3 /opt/ic/bin/monitor-expand-shared-data.py
+15356     912 /usr/local/bin/node_exporter --web.config.file=/etc/node_exporter/web.yml --collector.textfile.directory=/run/node_exporter/collector_te
+14312     411 /usr/lib/systemd/systemd-journald
+14020    1426 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+12940    1521 curl --ipv4 --connect-timeout 15 ic0.app
+11904     668 /usr/lib/systemd/systemd-journal-gatewayd
+11552    1525 sshd-session: admin [priv]
+11104     765 /usr/lib/systemd/systemd-networkd
+ 9820     913 /opt/ic/bin/metrics-proxy /etc/metrics-proxy.yaml
+ 9288     997 /opt/ic/bin/ic-https-outcalls-adapter /run/ic-node/config/ic-https-outcalls-adapter.json
+ 8812     995 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-mainnet-adapter.json5
+ 8612     993 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-testnet-adapter.json5
+ 8592     989 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-mainnet-adapter.json5
+ 8584     996 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-testnet-adapter.json5
+ 7844     933 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+ 7792    1539 head -30
+ 7588    1540 cut -c1-150
+ 7216    1530 sshd-session: admin@notty
+ 6360     986 /opt/ic/bin/remote_attestation_server
+ 6224     766 /usr/sbin/chronyd -n -F 1
+ 5004     645 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+ 4060     972 /usr/sbin/danted -f /etc/danted.conf
+ 4004     682 /bin/sh /usr/lib/systemd/scripts/chronyd-starter.sh -n -F 1
+== RSS by command (MiB) ==
+   212.0   1 replica
+    78.7   1 ic-crypto-csp
+    41.4  20 danted
+    33.8   4 ic-btc-adapter
+    28.1   1 systemd
+    25.6   2 systemd-journal
+    24.8   1 orchestrator
+    24.1   1 systemd-resolve
+    21.4   1 systemd-udevd
+    18.7   1 systemd-logind
+    18.3   2 sshd-session
+    17.3   1 monitor-expand-
+    15.0   1 node_exporter
+    13.7   1 canister_sandbo
+    12.6   1 curl
+    10.8   1 systemd-network
+     9.7   2 chronyd
+     9.6   1 metrics-proxy
+     9.1   1 ic-https-outcal
+     8.3   1 sort
+     7.9   1 head
+     7.7   1 sshd
+     6.2   1 remote_attestat
+     4.9   1 dbus-daemon
+     3.9   1 ps
+== replica jemalloc/process metrics ==
+jemalloc_active_bytes 162562048
+jemalloc_allocated_bytes 148517992
+jemalloc_mapped_bytes 204640256
+jemalloc_resident_bytes 177340416
+process_resident_memory_bytes 222146560

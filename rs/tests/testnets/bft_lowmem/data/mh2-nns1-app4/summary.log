@@ -1,0 +1,13 @@
+2026-10-05 14:10:30.758 INFO[rs/tests/driver/src/driver/local_backend.rs:594:9] Connecting bridge vbr-e090ba8841 to 1 remote host(s) over VXLAN vx-2458edbef9 (VNI 2382061, local 172.22.42.229, guest MTU 1450)
+2026-10-05 14:10:33.082 INFO[setup:rs/tests/testnets/bft_lowmem.rs:73:0] bft_lowmem: system=1 app=4 mem=2048MiB vcpus=2 dkg=49 max_state_delta=512MiB install_nns=true
+2026-10-05 14:10:34.716 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM kz6yh-5jp7j-ptjzp-7nksh-ku5dy-brgrk-n5kte-fuppl-f2scr-7b7pt-oqe on ubuntu@172.22.42.113
+2026-10-05 14:10:34.717 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM qkwdw-fczry-o7itw-potzk-jegjy-c2js3-c77dz-updrt-6ahf3-lrmph-6ae on ubuntu@172.22.42.113
+2026-10-05 14:10:34.719 INFO[setup:rs/tests/driver/src/driver/local_backend.rs:879:0] Placing VM yq4f4-myllr-amdyv-cnibr-z55vt-uj3lp-g6mxw-zlkry-hbbsj-3cgv2-nqe on ubuntu@172.22.42.113
+2026-10-05 14:10:38.584 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:357:0] Sending base image /home/ubuntu/.cache/bazel/_bazel_ubuntu/6d065581cce7ad9076e3b8db2b3afaf0/execroot/_main/_tmp/4c808d6376e9e0dd7e3b26e62b572b7e/local_backend/image_cache/744818cb44c0577864196a4fb04fbba9.img to ubuntu@172.22.42.113:/var/tmp/ictest/image_cache/744818cb44c0577864196a4fb04fbba9.img (sparse)
+2026-10-05 14:10:45.089 INFO[setup:rs/tests/driver/src/driver/local_multihost.rs:384:0] Base image on ubuntu@172.22.42.113 after 6.50531736s
+2026-10-05 14:12:12.769 INFO[setup:rs/tests/testnets/bft_lowmem.rs:107:0] bft_lowmem: all nodes healthy after 83.949797923s
+2026-10-05 14:12:58.825 INFO[setup:rs/tests/testnets/bft_lowmem.rs:119:0] bft_lowmem: NNS installed after 46.055178746s
+2026-10-05 14:13:50.160 INFO[progress:rs/tests/testnets/bft_lowmem.rs:144:0] bft_lowmem: subnet ziwj4-vln3n-5xqo2-267d6-p62be-e2z6u-b3i7d-2ddvw-ht76o-yjspz-xqe (1 nodes): 50 updates in 45.876494564s (918 ms/update)
+2026-10-05 14:13:55.221 INFO[progress:rs/tests/testnets/bft_lowmem.rs:167:0] bft_lowmem: subnet ziwj4-vln3n-5xqo2-267d6-p62be-e2z6u-b3i7d-2ddvw-ht76o-yjspz-xqe replicated + progressing
+2026-10-05 14:15:19.616 INFO[progress:rs/tests/testnets/bft_lowmem.rs:144:0] bft_lowmem: subnet rq6tv-juf3c-uhwpt-z5lmx-2awgs-iogdl-s6cms-k7y5j-efmph-t7zhq-kqe (4 nodes): 50 updates in 78.236629858s (1565 ms/update)
+2026-10-05 14:15:41.957 INFO[progress:rs/tests/testnets/bft_lowmem.rs:167:0] bft_lowmem: subnet rq6tv-juf3c-uhwpt-z5lmx-2awgs-iogdl-s6cms-k7y5j-efmph-t7zhq-kqe replicated + progressing

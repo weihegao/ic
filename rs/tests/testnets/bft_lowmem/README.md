@@ -120,6 +120,73 @@ The replica is bigger on the 13-node subnet because consensus and P2P state grow
 
 ### Caveats
 
+## Resources per node (measured)
+
+`scripts/resources.sh 60` takes two samples 60 s apart.
+
+**`m2048-nns1-app13`, single host.** 14 VMs on `ic-lowmem` (40 vCPU / 31 GiB), about 1 h after boot,
+idle apart from consensus:
+
+| Per VM | 13-node app subnet node | NNS node | Whole testnet |
+|---|---|---|---|
+| Host RAM (QEMU RSS) | ~1.55 GiB, still creeping toward the 2 GiB nominal | 1.80 GiB | 23.3 GiB used of 31 |
+| CPU | ~1.2 cores | 0.93 cores | 30.5 of 40 cores busy (load ~20) |
+| Disk (qcow2 overlay) | ~665 MiB | 731 MiB | 11 GB, plus the 1.5 GB base image (raw, 50 GB sparse) |
+| Network (per TAP) | ~1.5 Mbit/s each way | — | ~20 Mbit/s |
+
+**`mh2-nns1-app4`, worker.** 3 nodes of the 4-node app subnet on an 8 vCPU / 8 GB worker:
+~0.9 cores and ~1.07 GiB host RSS per node, and 4.2 GiB of the worker still free.
+
+**Budget per node.**
+- RAM: **2 GiB**. Host RSS tends to the nominal size, so don't overcommit.
+- CPU: **2 vCPU**. A node idles at 0.9 cores on a 4-node subnet and ~1.2 cores on a 13-node subnet.
+- Disk: **~5–10 GB**. It grows with state and journald.
+- Network: a few Mbit/s.
+- Per host: the 1.5 GB base image, plus ~0.5–1 GiB for the host OS.
+
+So an 8 vCPU / 8 GB VM takes **3 nodes** (2 if it also runs the driver). 1 NNS node + a 13-node
+subnet then needs about 5 such workers.
+
+## Multi-host mode: one testnet over several VMs
+
+Branch `lowmem-multihost` adds an opt-in multi-host mode to the local backend
+(`rs/tests/driver/src/driver/local_multihost.rs`):
+
+```
+LOCAL_BACKEND_HOSTS=local=2,ubuntu@172.22.42.113=3[,ubuntu@<ip>=3 ...]
+```
+
+- **Placement.** VMs fill the listed hosts in order, up to each host's slot count. `local` is the
+  driver host. The placement is persisted in `local_backend/placement.json`.
+- **One L2 segment.**
+  - Every host gets the group bridge, and a full-mesh VXLAN port (VNI and name derived from the group)
+    joins them. Nodes keep the group `/64`, the driver's gateway, file server and log-streaming
+    addresses, and `dnsmasq`, unchanged.
+  - Guest NICs advertise `host_mtu=1450` (`LOCAL_BACKEND_OVERLAY_MTU`) so frames fit the VXLAN
+    encapsulation on a 1500-byte underlay. Every guest came up with `enp1s0` at mtu 1450.
+- **Remote VMs.**
+  - The base image is sent once per host with sparse `tar` over SSH (6.5 s for 1.5 GB real on hera)
+    and cached in `/var/tmp/ictest/image_cache`.
+  - Config disks are uploaded per VM.
+  - The overlay, varstore, TAPs and `qemu-system-x86_64 -daemonize` run on the worker.
+  - Kill and reboot use its pid file and QMP over SSH.
+  - Its serial console is mirrored (`ssh … tail -F`) into the local `console.log`.
+- **Worker requirements.** SSH key login from the driver host, passwordless `sudo`, KVM (the user in
+  group `kvm`), `qemu-system-x86`, `qemu-utils`, `ovmf`, `python3`. On hera, cloud-init installs all
+  of that.
+- **Network namespace.** The driver must run in the host network namespace (the `--script_path` runner
+  in `scripts/`), not in a sandboxed `bazel test`.
+- **Teardown.** `scripts/teardown.sh` also cleans every host listed in `/mnt/build/hosts.txt`.
+
+**Proof run `mh2-nns1-app4`.**
+- Hosts: `ic-lowmem` (driver + 2 VMs) and `ic-worker-1` (`flv_dnet106_c08_m08192`, 3 VMs).
+- The 4-node app subnet had 3 nodes on the worker and 1 on the driver host, so every consensus round
+  crossed the overlay.
+- All 5 nodes were healthy after 84 s and the NNS installed in 46 s.
+- The 4-node subnet took 50 updates at 1,565 ms each, and every node, local or remote, read them back
+  and kept certifying. There were no OOM kills.
+- Data: `data/mh2-nns1-app4/`.
+
 ## Deploying a canister with icp-cli (proven 2026-10-05)
 
 Goal: use the normal icp-cli workflow, just with a different endpoint. The testnet came from
