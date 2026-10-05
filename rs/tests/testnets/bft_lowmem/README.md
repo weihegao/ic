@@ -165,6 +165,35 @@ a separate machine (macOS) on the hera intranet.
 
    So the install was replicated by consensus across the 13-node subnet.
 
+### Full dApp with a browser frontend: `dfinity/icp-hello-world-rust`
+
+This was deployed on the same 13-node subnet. It is a Rust `backend` (`greet` query) plus a Vite
+`frontend` asset canister. The example is a **dfx** project, and icp-cli 1.0.2 can only upload assets
+through a downloadable plugin, so dfx deploys it, into canisters that already exist:
+
+1. **Create the two canisters with icp-cli through the proxy**, with the dfx identity as a controller:
+   `icp canister create --detached --proxy <proxy> --controller <dfx-principal> --controller <icp-principal> --cycles 10t -n … -k …`
+   gave `backend` = `5j7vn-7yaaa-aaaaa-qaaca-cai` and `frontend` = `5o6tz-saaaa-aaaaa-qaacq-cai`.
+2. **Point dfx at the testnet.** Add `"networks": {"bft13": {"providers": ["http://127.0.0.1:18090"], "type": "persistent"}}`
+   to `dfx.json`, and write `canister_ids.json` with those IDs under `bft13`.
+3. **Deploy:**
+   ```
+   RUSTUP_TOOLCHAIN=1.93.1 dfx deploy --network bft13 --no-wallet --yes \
+     --provisional-create-canister-effective-canister-id <first-id-in-the-subnet-range>
+   ```
+   - dfx fetches the root key from the node's `/api/v2/status`.
+   - "All canisters have already been created", so there are no cycles-ledger calls.
+   - It builds the backend and the Vite frontend, then installs both and uploads the 5 assets.
+   - dfx also creates a Candid UI canister through the provisional API.
+   - Without the effective-canister-id flag, dfx fails with "Subnet is not authorized to respond for
+     the requested canister id".
+4. **Browser.** The replica endpoint does not serve `http_request` assets, so
+   `deploy/start_http_gateway.sh http://127.0.0.1:18090` starts a local PocketIC server whose HTTP gateway
+   forwards to the testnet node (`forward_to: {"Replica": url}`).
+   - `http://5o6tz-saaaa-aaaaa-qaacq-cai.localhost:18300/` serves the page with a valid `ic-certificate`.
+   - Submitting a name returned "Hello, Weihe on our own 13-node subnet!" from the backend, through
+     the gateway, on the 13-node subnet.
+
 Notes:
 - The deployed canister's controller is the proxy, since the proxy created it. Add your own principal
   as a controller (through the proxy) if you want to manage it directly.
