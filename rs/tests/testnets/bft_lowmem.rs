@@ -4,7 +4,8 @@
 //
 // All knobs come from the environment (pass them with `--test_env=NAME=value`):
 //   BFT_NODES                nodes in the System subnet            (default 4)
-//   BFT_APP_NODES            nodes in an extra Application subnet  (default 0 = none)
+//   BFT_APP_NODES            nodes per Application subnet          (default 0 = none)
+//   BFT_APP_SUBNETS          number of Application subnets         (default 1)
 //   BFT_MEM_MIB              RAM per node VM, MiB                   (default 2048)
 //   BFT_VCPUS                vCPUs per node VM                      (default 2)
 //   BFT_DKG_INTERVAL         DKG interval = checkpoint interval     (default 49)
@@ -65,6 +66,7 @@ pub fn setup(env: TestEnv) {
     let log = env.logger();
     let nodes = env_u64("BFT_NODES", 4) as usize;
     let app_nodes = env_u64("BFT_APP_NODES", 0) as usize;
+    let app_subnets = env_u64("BFT_APP_SUBNETS", 1) as usize;
     let mem_mib = env_u64("BFT_MEM_MIB", 2048);
     let vcpus = env_u64("BFT_VCPUS", 2);
     let dkg = env_u64("BFT_DKG_INTERVAL", 49);
@@ -72,7 +74,7 @@ pub fn setup(env: TestEnv) {
     let install_nns = env_u64("BFT_INSTALL_NNS", 0) == 1;
     info!(
         log,
-        "bft_lowmem: system={nodes} app={app_nodes} mem={mem_mib}MiB vcpus={vcpus} \
+        "bft_lowmem: system={nodes} app={app_subnets}x{app_nodes} mem={mem_mib}MiB vcpus={vcpus} \
          dkg={dkg} max_state_delta={delta_mib}MiB install_nns={install_nns}"
     );
 
@@ -94,7 +96,9 @@ pub fn setup(env: TestEnv) {
         })
         .add_subnet(subnet(SubnetType::System, nodes));
     if app_nodes > 0 {
-        ic = ic.add_subnet(subnet(SubnetType::Application, app_nodes));
+        for _ in 0..app_subnets {
+            ic = ic.add_subnet(subnet(SubnetType::Application, app_nodes));
+        }
     }
     ic.setup_and_start(&env)
         .expect("Failed to setup IC under test");
