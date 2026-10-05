@@ -1,0 +1,80 @@
+Warning: Permanently added 'fd00:995a:533a:0:6801:91ff:fe8b:aa45' (ED25519) to the list of known hosts.
+== jvagb-yzj6b-dn7ml-khleq-bevii-g7jih-eisnz-z4op5-cy3qq-v2hf3-aae ==
+2026-10-05T13:06:01Z
+ 13:06:01 up 5 min,  0 users,  load average: 6.23, 4.62, 2.09
+== free -m ==
+               total        used        free      shared  buff/cache   available
+Mem:             949         866         100           0         102          82
+Swap:             79          66          13
+== meminfo ==
+MemTotal:         971940 kB
+MemAvailable:      84000 kB
+Cached:            84012 kB
+SwapTotal:         81916 kB
+SwapFree:          14168 kB
+AnonPages:        646996 kB
+Shmem:               864 kB
+Slab:              69776 kB
+== top RSS (KiB) ==
+522740   3443 /opt/ic/bin/compiler_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+58960    3325 /opt/ic/bin/replica --replica-version=feb8e5f205ad5577b2e11e56a6f94faa2d1c6116 --config-file=/run/ic-node/config/ic.json5 --catch-up-pac
+18044       1 /sbin/init
+13472     987 /opt/ic/bin/ic-crypto-csp --replica-config-file /run/ic-node/config/ic.json5
+11288     661 /usr/lib/systemd/systemd-logind
+11052     339 /usr/lib/systemd/systemd-resolved
+11008     393 /usr/lib/systemd/systemd-journald
+10796    3472 sshd-session: admin [priv]
+10792     635 /usr/bin/python3 /opt/ic/bin/monitor-expand-shared-data.py
+ 9268     342 /usr/lib/systemd/systemd-udevd
+ 7500    3486 head -30
+ 7264    3487 cut -c1-150
+ 6908    3477 sshd-session: admin@notty
+ 6408     650 /usr/lib/systemd/systemd-journal-gatewayd
+ 5568    3292 /opt/ic/bin/orchestrator --replica-binary-dir /var/lib/ic/data/images --cup-dir /var/lib/ic/data/cups --replica-config-file /run/ic-node
+ 4312     950 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+ 3852    3485 ps -eo rss=,pid=,args= --sort=-rss
+ 3412    3440 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+ 3372    3478 bash -c          echo "== $(hostname) =="; date -u +%FT%TZ; uptime         echo "== free -m =="; free -m         echo "== meminfo =="; g
+ 2604     936 /usr/local/bin/node_exporter --web.config.file=/etc/node_exporter/web.yml --collector.textfile.directory=/run/node_exporter/collector_te
+ 2592     630 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+ 2044    3379 /opt/ic/bin/sandbox_launcher --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+ 1964     981 /opt/ic/bin/ic-https-outcalls-adapter /run/ic-node/config/ic-https-outcalls-adapter.json
+ 1696     990 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-testnet-adapter.json5
+ 1604     989 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-mainnet-adapter.json5
+ 1580     979 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-testnet-adapter.json5
+ 1532     946 /opt/ic/bin/infogetty -u root /dev/ttyS0
+ 1524     937 /opt/ic/bin/metrics-proxy /etc/metrics-proxy.yaml
+ 1444     890 /usr/lib/systemd/systemd-networkd
+ 1428     977 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-mainnet-adapter.json5
+== RSS by command (MiB) ==
+   510.6   1 compiler_sandbo
+    56.5   1 replica
+    17.6   1 systemd
+    17.3   2 sshd-session
+    17.0   2 systemd-journal
+    13.2   1 ic-crypto-csp
+    11.0   1 systemd-logind
+    10.8   1 systemd-resolve
+    10.5   1 monitor-expand-
+     9.1   1 systemd-udevd
+     8.7  20 danted
+     7.6   1 sort
+     7.3   1 head
+     6.2   4 ic-btc-adapter
+     5.4   1 orchestrator
+     4.2   1 sshd
+     3.8   1 ps
+     3.3   1 canister_sandbo
+     3.3   1 bash
+     2.5   1 node_exporter
+     2.5   1 dbus-daemon
+     2.0   1 sandbox_launche
+     1.9   1 ic-https-outcal
+     1.5   2 chronyd
+     1.5   1 metrics-proxy
+== replica jemalloc/process metrics ==
+jemalloc_active_bytes 52858880
+jemalloc_allocated_bytes 50833096
+jemalloc_mapped_bytes 106573824
+jemalloc_resident_bytes 78721024
+process_resident_memory_bytes 58068992

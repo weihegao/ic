@@ -1,0 +1,80 @@
+Warning: Permanently added 'fd00:c626:7fe9:0:6801:15ff:fe31:9038' (ED25519) to the list of known hosts.
+== jmwv2-cpmk6-6dgw6-plbci-hmlep-ykkcv-w4jrz-qq4ch-uvwn2-r2jbi-dqe ==
+2026-10-05T12:59:17Z
+ 12:59:17 up 3 min,  0 users,  load average: 1.50, 1.06, 0.44
+== free -m ==
+               total        used        free      shared  buff/cache   available
+Mem:            1451         604         665          18         333         847
+Swap:             79          47          32
+== meminfo ==
+MemTotal:        1486504 kB
+MemAvailable:     867552 kB
+Cached:           308060 kB
+SwapTotal:         81916 kB
+SwapFree:          32876 kB
+AnonPages:        312944 kB
+Shmem:             18448 kB
+Slab:              73860 kB
+== top RSS (KiB) ==
+188608   1043 /opt/ic/bin/replica --replica-version=feb8e5f205ad5577b2e11e56a6f94faa2d1c6116 --config-file=/run/ic-node/config/ic.json5 --catch-up-pac
+77496     952 /opt/ic/bin/ic-crypto-csp --replica-config-file /run/ic-node/config/ic.json5
+45860    1374 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+27760       1 /sbin/init
+23248     313 /usr/lib/systemd/systemd-resolved
+23216    1618 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+21576     316 /usr/lib/systemd/systemd-udevd
+20760    1308 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+17564     629 /usr/lib/systemd/systemd-logind
+16700     955 /opt/ic/bin/orchestrator --replica-binary-dir /var/lib/ic/data/images --cup-dir /var/lib/ic/data/cups --replica-config-file /run/ic-node
+16408    1584 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+16328    1520 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+15612     349 /usr/lib/systemd/systemd-journald
+13672    1684 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+13348     609 /usr/bin/python3 /opt/ic/bin/monitor-expand-shared-data.py
+12604     628 /usr/lib/systemd/systemd-journal-gatewayd
+11852     901 /usr/local/bin/node_exporter --web.config.file=/etc/node_exporter/web.yml --collector.textfile.directory=/run/node_exporter/collector_te
+11504    1767 sshd-session: admin [priv]
+11068    1341 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+10344    1650 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+ 9876     735 /usr/lib/systemd/systemd-networkd
+ 9804    1488 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+ 9572    1552 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+ 9332     960 /opt/ic/bin/ic-https-outcalls-adapter /run/ic-node/config/ic-https-outcalls-adapter.json
+ 8584    1454 /opt/ic/bin/canister_sandbox --embedder-config {"query_execution_threads_per_canister":2,"max_globals":1000,"max_functions":50000,"max_c
+ 8452     946 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-mainnet-adapter.json5
+ 8240     902 /opt/ic/bin/metrics-proxy /etc/metrics-proxy.yaml
+ 8156     957 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-testnet-adapter.json5
+ 8068     959 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-testnet-adapter.json5
+ 8020     958 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-mainnet-adapter.json5
+== RSS by command (MiB) ==
+   183.7   1 replica
+   181.4  11 canister_sandbo
+    75.7   1 ic-crypto-csp
+    31.9   4 ic-btc-adapter
+    27.6   2 systemd-journal
+    27.1   1 systemd
+    25.5  20 danted
+    22.7   1 systemd-resolve
+    21.1   1 systemd-udevd
+    18.3   2 sshd-session
+    17.2   1 systemd-logind
+    16.3   1 orchestrator
+    13.0   1 monitor-expand-
+    11.6   1 node_exporter
+     9.6   1 systemd-network
+     9.2   2 chronyd
+     9.1   1 ic-https-outcal
+     8.0   1 metrics-proxy
+     7.6   1 sshd
+     5.3   3 bash
+     4.7   1 remote_attestat
+     4.4   1 dbus-daemon
+     3.9   1 ps
+     3.9   1 chronyd-starter
+     2.8   1 infogetty
+== replica jemalloc/process metrics ==
+jemalloc_active_bytes 173023232
+jemalloc_allocated_bytes 157621776
+jemalloc_mapped_bytes 216711168
+jemalloc_resident_bytes 191586304
+process_resident_memory_bytes 192573440

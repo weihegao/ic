@@ -1,0 +1,75 @@
+Warning: Permanently added 'fd00:995a:533a:0:6801:23ff:fefb:cfd8' (ED25519) to the list of known hosts.
+== gp7ho-tyjmy-ubx4o-gk6fh-ye3ld-enf7u-nenbb-mpjqk-dx5vw-cibhh-qae ==
+2026-10-05T13:05:55Z
+ 13:05:55 up 5 min,  0 users,  load average: 8.17, 5.34, 2.48
+== free -m ==
+               total        used        free      shared  buff/cache   available
+Mem:             949         341         624           0         106         607
+Swap:             79          67          12
+== meminfo ==
+MemTotal:         971944 kB
+MemAvailable:     622348 kB
+Cached:            92408 kB
+SwapTotal:         81916 kB
+SwapFree:          12952 kB
+AnonPages:         75516 kB
+Shmem:               772 kB
+Slab:              67044 kB
+== top RSS (KiB) ==
+16968       1 /sbin/init
+11800     991 /opt/ic/bin/ic-crypto-csp --replica-config-file /run/ic-node/config/ic.json5
+11172     396 /usr/lib/systemd/systemd-journald
+10384     653 /usr/lib/systemd/systemd-logind
+ 8656    3420 sshd-session: admin [priv]
+ 8364     344 /usr/lib/systemd/systemd-udevd
+ 8244     637 /usr/bin/python3 /opt/ic/bin/monitor-expand-shared-data.py
+ 7568    3435 head -30
+ 7568    3436 cut -c1-150
+ 7032    3426 sshd-session: admin@notty
+ 6956     342 /usr/lib/systemd/systemd-resolved
+ 6036     652 /usr/lib/systemd/systemd-journal-gatewayd
+ 3968    3434 ps -eo rss=,pid=,args= --sort=-rss
+ 3516    3427 bash -c          echo "== $(hostname) =="; date -u +%FT%TZ; uptime         echo "== free -m =="; free -m         echo "== meminfo =="; g
+ 2708    3386 curl --ipv4 --connect-timeout 15 httpbin.org
+ 2524     631 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+ 2200     936 /usr/local/bin/node_exporter --web.config.file=/etc/node_exporter/web.yml --collector.textfile.directory=/run/node_exporter/collector_te
+ 2196     950 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+ 1680     982 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-mainnet-adapter.json5
+ 1644     977 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-mainnet-adapter.json5
+ 1596     980 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-testnet-adapter.json5
+ 1524     983 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-testnet-adapter.json5
+ 1504     984 /opt/ic/bin/ic-https-outcalls-adapter /run/ic-node/config/ic-https-outcalls-adapter.json
+ 1436     911 /usr/lib/systemd/systemd-networkd
+ 1360     937 /opt/ic/bin/metrics-proxy /etc/metrics-proxy.yaml
+  844     699 /usr/sbin/chronyd -n -F 1
+  700     971 /opt/ic/bin/remote_attestation_server
+  692     906 /usr/sbin/chronyd -n -F 1
+  608    1011 danted: io-child: 0/32 (0 in progre
+  340     994 danted: negotiate-child: 0/96
+== RSS by command (MiB) ==
+    16.8   2 systemd-journal
+    16.6   1 systemd
+    15.3   2 sshd-session
+    11.5   1 ic-crypto-csp
+    10.1   1 systemd-logind
+     8.2   1 systemd-udevd
+     8.1   1 monitor-expand-
+     7.4   1 head
+     6.8   1 systemd-resolve
+     6.5   1 sort
+     6.3   4 ic-btc-adapter
+     5.6  20 danted
+     3.9   1 ps
+     3.4   1 bash
+     2.6   1 curl
+     2.5   1 dbus-daemon
+     2.2   1 node_exporter
+     2.1   1 sshd
+     1.5   2 chronyd
+     1.5   1 ic-https-outcal
+     1.4   1 systemd-network
+     1.3   1 metrics-proxy
+     0.7   1 remote_attestat
+     0.3   1 ipv4-connectivi
+     0.3   1 chronyd-starter
+== replica jemalloc/process metrics ==

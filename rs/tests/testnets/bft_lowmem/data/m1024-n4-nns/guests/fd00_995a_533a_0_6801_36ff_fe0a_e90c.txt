@@ -1,0 +1,75 @@
+Warning: Permanently added 'fd00:995a:533a:0:6801:36ff:fe0a:e90c' (ED25519) to the list of known hosts.
+== vigce-ke6dj-p5vk6-iddzp-nqztv-qszxi-js7gf-4zt5p-i3cwm-ek62h-eae ==
+2026-10-05T13:05:58Z
+ 13:05:58 up 5 min,  0 users,  load average: 9.04, 4.72, 2.05
+== free -m ==
+               total        used        free      shared  buff/cache   available
+Mem:             949         339         600           0         139         609
+Swap:             79          79           0
+== meminfo ==
+MemTotal:         971944 kB
+MemAvailable:     624172 kB
+Cached:           125284 kB
+SwapTotal:         81916 kB
+SwapFree:            744 kB
+AnonPages:         61188 kB
+Shmem:               360 kB
+Slab:              67092 kB
+== top RSS (KiB) ==
+41516     987 /opt/ic/bin/ic-crypto-csp --replica-config-file /run/ic-node/config/ic.json5
+15756       1 /sbin/init
+11052    3350 sshd-session: admin [priv]
+ 9848     394 /usr/lib/systemd/systemd-journald
+ 7860     653 /usr/lib/systemd/systemd-logind
+ 7632    3363 head -30
+ 7540    3364 cut -c1-150
+ 6976    3355 sshd-session: admin@notty
+ 4932     650 /usr/lib/systemd/systemd-journal-gatewayd
+ 4600     951 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+ 3992    3362 ps -eo rss=,pid=,args= --sort=-rss
+ 3496    3356 bash -c          echo "== $(hostname) =="; date -u +%FT%TZ; uptime         echo "== free -m =="; free -m         echo "== meminfo =="; g
+ 3040     340 /usr/lib/systemd/systemd-resolved
+ 2416     632 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+ 2108     638 /usr/bin/python3 /opt/ic/bin/monitor-expand-shared-data.py
+ 1644     989 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-testnet-adapter.json5
+ 1620     990 /opt/ic/bin/ic-https-outcalls-adapter /run/ic-node/config/ic-https-outcalls-adapter.json
+ 1076     937 /opt/ic/bin/metrics-proxy /etc/metrics-proxy.yaml
+  956     343 /usr/lib/systemd/systemd-udevd
+  640     972 /opt/ic/bin/remote_attestation_server
+  636     698 /usr/sbin/chronyd -n -F 1
+  532     907 /usr/sbin/chronyd -n -F 1
+  208     672 /bin/sh /usr/lib/systemd/scripts/chronyd-starter.sh -n -F 1
+  172     980 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-testnet-adapter.json5
+  100     947 /usr/sbin/agetty --noreset --noclear --issue-file=/etc/issue:/etc/issue.d:/run/issue.d:/usr/lib/issue.d - linux
+   92     911 /usr/lib/systemd/systemd-networkd
+   88     948 /opt/ic/bin/infogetty -u root /dev/ttyS0
+   76     936 /usr/local/bin/node_exporter --web.config.file=/etc/node_exporter/web.yml --collector.textfile.directory=/run/node_exporter/collector_te
+   60     978 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-btc-mainnet-adapter.json5
+   60     982 /opt/ic/bin/ic-btc-adapter /run/ic-node/config/ic-doge-mainnet-adapter.json5
+== RSS by command (MiB) ==
+    40.5   1 ic-crypto-csp
+    17.6   2 sshd-session
+    15.5   1 systemd
+    14.4   2 systemd-journal
+     7.7   1 systemd-logind
+     4.5   1 sshd
+     4.0   1 sort
+     3.9   1 ps
+     3.4   1 bash
+     3.1   1 head
+     3.0   1 systemd-resolve
+     2.4   1 dbus-daemon
+     2.1   1 monitor-expand-
+     1.9   4 ic-btc-adapter
+     1.6   1 ic-https-outcal
+     1.1   2 chronyd
+     1.1   1 metrics-proxy
+     0.9   1 systemd-udevd
+     0.6   1 remote_attestat
+     0.3   1 awk
+     0.2  20 danted
+     0.2   1 chronyd-starter
+     0.1   1 systemd-network
+     0.1   1 node_exporter
+     0.1   1 infogetty
+== replica jemalloc/process metrics ==

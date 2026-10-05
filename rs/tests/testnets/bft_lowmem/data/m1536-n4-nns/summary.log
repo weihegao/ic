@@ -1,0 +1,5 @@
+2026-10-05 12:55:41.291 INFO[setup:rs/tests/testnets/bft_lowmem.rs:73:0] bft_lowmem: system=4 app=0 mem=1536MiB vcpus=2 dkg=49 max_state_delta=512MiB install_nns=true
+2026-10-05 12:56:41.726 INFO[setup:rs/tests/testnets/bft_lowmem.rs:107:0] bft_lowmem: all nodes healthy after 55.487055349s
+2026-10-05 12:57:21.964 INFO[setup:rs/tests/testnets/bft_lowmem.rs:119:0] bft_lowmem: NNS installed after 40.237430362s
+2026-10-05 12:58:55.556 INFO[progress:rs/tests/testnets/bft_lowmem.rs:144:0] bft_lowmem: subnet t2dec-b5qhm-ljbye-x6sol-qe7i3-5zfdc-e6osu-qp74i-jleyg-z5y4m-kqe (4 nodes): 50 updates in 83.614907624s (1672 ms/update)
+2026-10-05 12:59:15.987 INFO[progress:rs/tests/testnets/bft_lowmem.rs:167:0] bft_lowmem: subnet t2dec-b5qhm-ljbye-x6sol-qe7i3-5zfdc-e6osu-qp74i-jleyg-z5y4m-kqe replicated + progressing

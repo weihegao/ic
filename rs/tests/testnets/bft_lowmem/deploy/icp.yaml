@@ -1,0 +1,28 @@
+# icp-cli project that deploys a prebuilt canister to a self-hosted bft_lowmem testnet.
+#
+# - `url` is any application-subnet node's public HTTP endpoint (port 8080). The nodes
+#   only have ULA IPv6 addresses on the testnet host's bridge, so from another machine
+#   forward one first:  ssh -N -L '18090:[<node-ipv6>]:8080' ubuntu@<testnet-host>
+# - `root-key` is the testnet's NNS public key (ic_prep/nns_public_key.pem under the
+#   test's TEST_TMPDIR) as hex DER: base64-decode the PEM body, then hex-encode it.
+#
+# Deploy with the proxy canister created by deploy/bootstrap_proxy.mjs:
+#   icp deploy -e testnet --proxy <proxy-canister-id>
+networks:
+  - name: testnet
+    mode: connected
+    url: http://127.0.0.1:18090
+    root-key: <ROOT_KEY_HEX>
+
+environments:
+  - name: testnet
+    network: testnet
+    canisters: [greet]
+
+canisters:
+  - name: greet
+    build:
+      steps:
+        - type: script
+          commands:
+            - cp rva_trivial_tests.wasm "$ICP_WASM_OUTPUT_PATH"
