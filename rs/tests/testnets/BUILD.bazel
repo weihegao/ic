@@ -482,3 +482,22 @@ system_test_nns(
         "@crate_index//:anyhow",
     ],
 )
+
+system_test_nns(
+    name = "bft_lowmem",
+    cpus = MIN_LOCAL_CPUS + 4 * 2,  # 4 System nodes @ 2 vCPUs by default (BFT_NODES/BFT_VCPUS).
+    tags = [
+        "dynamic_testnet",
+        "manual",
+    ],
+    deps = [
+        # Keep sorted.
+        "//rs/registry/resource_limits",
+        "//rs/registry/subnet_type",
+        "//rs/tests/consensus/utils",
+        "//rs/tests/driver:ic-system-test-driver",
+        "//rs/types/types",
+        "@crate_index//:anyhow",
+        "@crate_index//:slog",
+    ],
+)
