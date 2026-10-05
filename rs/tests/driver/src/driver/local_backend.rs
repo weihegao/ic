@@ -19,6 +19,7 @@
 //! `enp2s0`).
 
 use crate::driver::farm::{VMCreateResponse, VmSpec};
+use crate::driver::local_multihost as multihost;
 use crate::driver::resource::DiskImage;
 use crate::driver::test_env::{TestEnv, TestEnvAttribute};
 use crate::driver::test_env_api::get_dependency_path_from_env;
@@ -42,6 +43,9 @@ use std::time::{Duration, Instant};
 /// of the variable store (its per-VM UEFI NVRAM).
 const OVMF_CODE: &str = "/usr/share/OVMF/OVMF_CODE_4M.fd";
 const OVMF_VARS_TEMPLATE: &str = "/usr/share/OVMF/OVMF_VARS_4M.fd";
+
+/// Pid-file (in a VM's local dir) of the process mirroring a remote VM's console.
+const CONSOLE_FOLLOWER_PID: &str = "console-follower.pid";
 
 /// Persistent record (in the root TestEnv) of the backend's working dir, so
 /// forked task subprocesses resolve the same paths (VM disks, per-VM metadata,
@@ -110,6 +114,10 @@ struct PersistedVm {
     /// Absolute paths of extra disk images attached via
     /// [`LocalBackend::attach_disk_images`]; empty until that call runs.
     extra_disks: Vec<PathBuf>,
+    /// SSH target of the host the VM runs on, or `None` for the driver's own
+    /// host. Only set in multi-host mode (see [`multihost`]).
+    #[serde(default)]
+    host: Option<String>,
 }
 
 impl LocalBackend {
@@ -556,6 +564,54 @@ impl LocalBackend {
         // VMs that requested a second NIC.
         self.start_ra_daemon(group_name, &bridge, &prefix, &ipv4_prefix)?;
 
+        // Multi-host mode: extend the bridge's L2 segment to the other hosts.
+        if let Some(plan) = multihost::host_plan()? {
+            self.connect_hosts(group_name, &bridge, &plan)?;
+        }
+
+        Ok(())
+    }
+
+    /// Join the group bridge on this host and on every remote host of `plan` into
+    /// one L2 segment with a full-mesh VXLAN overlay (see [`multihost`]), and lower
+    /// the bridge MTU to fit the encapsulation.
+    fn connect_hosts(
+        &self,
+        group_name: &str,
+        bridge: &str,
+        plan: &[multihost::HostSlots],
+    ) -> Result<()> {
+        let remotes = multihost::remote_hosts(plan);
+        if remotes.is_empty() {
+            return Ok(());
+        }
+        let mtu = multihost::overlay_mtu();
+        let vx = multihost::vxlan_name(group_name);
+        let vni = multihost::vni(group_name);
+        let local_ip = multihost::local_underlay_ip(multihost::ssh_addr(&remotes[0]))?;
+        let mut ips = vec![local_ip.clone()];
+        ips.extend(remotes.iter().map(|r| multihost::ssh_addr(r).to_string()));
+        info!(
+            self.logger,
+            "Connecting bridge {bridge} to {} remote host(s) over VXLAN {vx} (VNI {vni}, local {local_ip}, guest MTU {mtu})",
+            remotes.len()
+        );
+        let fdb: String = ips[1..]
+            .iter()
+            .map(|ip| format!(" && bridge fdb append 00:00:00:00:00:00 dev {vx} dst {ip}"))
+            .collect();
+        let script = format!(
+            "ip link del {vx} 2>/dev/null; \
+             ip link add {vx} type vxlan id {vni} dstport 4789 local {local_ip}{fdb} && \
+             ip link set dev {vx} mtu {mtu} master {bridge} && \
+             ip link set dev {vx} up && \
+             ip link set dev {bridge} mtu {mtu}"
+        );
+        Self::run_net_admin(&script, "connect group bridge to remote hosts")?;
+        for remote in &remotes {
+            multihost::remote_group_up(remote, bridge, &vx, vni, mtu, &ips)
+                .with_context(|| format!("setting up group overlay on {remote}"))?;
+        }
         Ok(())
     }
 
@@ -739,9 +795,24 @@ impl LocalBackend {
         let vms_dir = self.active_local_backend.working_dir.join("vms");
         if let Ok(entries) = std::fs::read_dir(&vms_dir) {
             for entry in entries.flatten() {
+                multihost::stop_console_follower(&entry.path().join(CONSOLE_FOLLOWER_PID));
                 let pid_path = Self::qemu_pid_path(&entry.path());
                 if pid_path.exists() {
                     self.stop_qemu(&pid_path);
+                }
+            }
+        }
+
+        // Multi-host mode: stop the group's VMs on the other hosts and remove
+        // their side of the overlay. (This host's VXLAN port is a bridge slave and
+        // goes with the TAPs below.)
+        if let Ok(Some(plan)) = multihost::host_plan() {
+            for remote in multihost::remote_hosts(&plan) {
+                if let Err(err) = multihost::remote_group_down(&remote, &bridge) {
+                    warn!(
+                        self.logger,
+                        "Cleaning up group {group_name} on {remote} failed: {err:#}"
+                    );
                 }
             }
         }
@@ -795,6 +866,16 @@ impl LocalBackend {
             .lock()
             .unwrap()
             .insert(vm_name.to_string(), ipv6);
+        // Multi-host mode: decide (once, persisted) which host runs this VM.
+        let host = match multihost::host_plan()? {
+            Some(plan) => {
+                multihost::assign_host(&self.active_local_backend.working_dir, vm_name, &plan)?
+            }
+            None => None,
+        };
+        if let Some(target) = &host {
+            info!(self.logger, "Placing VM {vm_name} on {target}");
+        }
         self.write_vm_meta(
             vm_name,
             &PersistedVm {
@@ -803,6 +884,7 @@ impl LocalBackend {
                 min_boot_image_size_gib: boot_image_minimal_size_gibibytes,
                 has_ipv4,
                 extra_disks: Vec::new(),
+                host,
             },
         )?;
 
@@ -913,20 +995,56 @@ impl LocalBackend {
         Ok(base)
     }
 
-    /// Build the QEMU command line for `vm_name` and launch it (daemonized).
+    /// Build the QEMU command line for `vm_name` and launch it (daemonized), on
+    /// this host or, in multi-host mode, on the host it was placed on.
     pub fn start_vm(&self, group_name: &str, vm_name: &str) -> Result<()> {
         // Recover the per-VM state persisted by `create_vm` /
         // `attach_disk_images`. Reading from disk (not an in-memory cache) lets
         // `start_vm` run from a forked task subprocess whose `connect_only`
         // handle has no in-memory record of the VM.
-        let PersistedVm {
-            primary_image,
-            spec,
-            min_boot_image_size_gib: min_gib,
-            has_ipv4,
-            extra_disks: extra,
-        } = self.read_vm_meta(vm_name)?;
+        let meta = self.read_vm_meta(vm_name)?;
+        match meta.host.clone() {
+            Some(target) => self.start_remote_vm(group_name, vm_name, &target, &meta),
+            None => self.start_local_vm(group_name, vm_name, &meta),
+        }
+    }
 
+    /// The pristine base image `meta`'s VM boots from (extracted once into the
+    /// shared base cache), and the qcow2 overlay size to request if the VM asked
+    /// for a bigger boot disk than the base. Growing is one-way: a request
+    /// smaller than the base leaves the overlay at the base size.
+    fn base_and_overlay_size(
+        &self,
+        vm_name: &str,
+        meta: &PersistedVm,
+    ) -> Result<(PathBuf, Option<String>)> {
+        let local_src = match &meta.primary_image {
+            DiskImage::Local { path, .. } => path.clone(),
+            DiskImage::Url { .. } => {
+                panic!(
+                    "LocalBackend cannot fetch URL-based primary image for {vm_name}; \
+                     a `DiskImage::Local` was expected. \
+                     Did the bazel `system_test` macro set `local = True`?"
+                );
+            }
+        };
+        let base = self.ensure_base_image(&local_src)?;
+        // The base is raw, so its byte length is its virtual size.
+        let size = match meta.min_boot_image_size_gib {
+            Some(min_gib) => {
+                let base_virtual = std::fs::metadata(&base)
+                    .with_context(|| format!("stat base image {}", base.display()))?
+                    .len();
+                (min_gib.saturating_mul(1024 * 1024 * 1024) > base_virtual)
+                    .then(|| format!("{min_gib}G"))
+            }
+            None => None,
+        };
+        Ok((base, size))
+    }
+
+    /// Start `vm_name` on the driver's own host.
+    fn start_local_vm(&self, group_name: &str, vm_name: &str, meta: &PersistedVm) -> Result<()> {
         let vm_dir = self.vm_dir(vm_name);
         std::fs::create_dir_all(&vm_dir)?;
         let primary_disk = vm_dir.join("primary.qcow2");
@@ -935,23 +1053,13 @@ impl LocalBackend {
         // overlay already exists and holds the node's persisted writes; reusing
         // it mirrors a real VM reboot. Re-creating it would discard that state.
         if !primary_disk.exists() {
-            let local_src = match &primary_image {
-                DiskImage::Local { path, .. } => path.clone(),
-                DiskImage::Url { .. } => {
-                    panic!(
-                        "LocalBackend cannot fetch URL-based primary image for {vm_name}; \
-                         a `DiskImage::Local` was expected. \
-                         Did the bazel `system_test` macro set `local = True`?"
-                    );
-                }
-            };
             // Extract the shared pristine image once into the content-addressed
             // base cache, then give this VM a thin copy-on-write qcow2 overlay
             // backed by it. Creating the overlay is near-instant and filesystem
             // independent (unlike `cp --reflink`, which needs a CoW filesystem);
             // the VM's writes stay in its own overlay while the base is shared
             // read-only across all nodes.
-            let base = self.ensure_base_image(&local_src)?;
+            let (base, size) = self.base_and_overlay_size(vm_name, meta)?;
             info!(
                 self.logger,
                 "Creating qcow2 overlay {} backed by {}",
@@ -968,17 +1076,8 @@ impl LocalBackend {
                 .arg("-b")
                 .arg(&base)
                 .arg(&primary_disk);
-            // Grow the overlay's virtual size to `min_gib`, but only when it
-            // exceeds the base image's size (the base is raw, so its byte length
-            // is its virtual size). This is grow-only: a request smaller than the
-            // base leaves the overlay at the base size.
-            if let Some(min_gib) = min_gib {
-                let base_virtual = std::fs::metadata(&base)
-                    .with_context(|| format!("stat base image {}", base.display()))?
-                    .len();
-                if min_gib.saturating_mul(1024 * 1024 * 1024) > base_virtual {
-                    cmd.arg(format!("{min_gib}G"));
-                }
+            if let Some(size) = size {
+                cmd.arg(size);
             }
             let output = cmd.output().with_context(|| {
                 format!("running qemu-img create for {}", primary_disk.display())
@@ -994,39 +1093,41 @@ impl LocalBackend {
             std::fs::set_permissions(&primary_disk, std::fs::Permissions::from_mode(0o600))?;
         }
 
-        let mac = vm_mac(group_name, vm_name);
-        let domain_name = Self::domain_name(group_name, vm_name);
-        let console_log = vm_dir.join("console.log");
-        let uuid = vm_uuid(group_name, vm_name);
-
         // Create the per-VM TAP, attach it to the group bridge, and bring it up
         // via the [`net_admin`] launcher. `user <current>` tags the TAP as ours,
         // letting the unprivileged QEMU (which runs as the same user) open it via
         // `-netdev tap,ifname=...,script=no,downscript=no` without needing root
         // to create a device. Recreating it fresh (delete first) keeps this
         // idempotent across a re-used VM (e.g. `vm().kill()` + `vm().start()`).
+        // In multi-host mode the TAP also gets the overlay MTU.
         let tap = Self::tap_name(group_name, vm_name);
         let bridge = Self::bridge_name(group_name);
         let user = current_username();
+        let mtu = multihost::guest_mtu();
+        let set_mtu = |dev: &str| {
+            mtu.map(|m| format!(" && ip link set dev {dev} mtu {m}"))
+                .unwrap_or_default()
+        };
         let tap_script = format!(
             "ip link del {tap} 2>/dev/null; \
-             ip tuntap add dev {tap} mode tap user {user} && \
+             ip tuntap add dev {tap} mode tap user {user}{} && \
              ip link set dev {tap} master {bridge} && \
-             ip link set dev {tap} up"
+             ip link set dev {tap} up",
+            set_mtu(&tap)
         );
         Self::run_net_admin(&tap_script, "create VM tap")?;
 
         // If the VM requested IPv4, create a second TAP on the same bridge for
         // the guest's `enp2s0`, which obtains an address via DHCPv4 from the
         // group's `dnsmasq`.
-        let mac_ipv4 = vm_mac_ipv4(group_name, vm_name);
         let tap_ipv4 = Self::tap_name_ipv4(group_name, vm_name);
-        if has_ipv4 {
+        if meta.has_ipv4 {
             let tap_ipv4_script = format!(
                 "ip link del {tap_ipv4} 2>/dev/null; \
-                 ip tuntap add dev {tap_ipv4} mode tap user {user} && \
+                 ip tuntap add dev {tap_ipv4} mode tap user {user}{} && \
                  ip link set dev {tap_ipv4} master {bridge} && \
-                 ip link set dev {tap_ipv4} up"
+                 ip link set dev {tap_ipv4} up",
+                set_mtu(&tap_ipv4)
             );
             Self::run_net_admin(&tap_ipv4_script, "create VM ipv4 tap")?;
         }
@@ -1053,137 +1154,29 @@ impl LocalBackend {
         let _ = std::fs::remove_file(&pid_path);
         let _ = std::fs::remove_file(&qmp_path);
 
-        // Assemble the QEMU command line. `arg!` appends space-separated tokens;
-        // every virtio/PCIe device is placed behind its own `pcie-root-port` on
-        // `pcie.0` (allocated by `root_port!`, one slot each in ascending order).
-        // The guest assigns PCI bus numbers to the root ports in slot order, so
-        // putting the NIC(s) on the FIRST root port(s) makes the guest name them
-        // deterministically -- `enp1s0` (primary) and `enp2s0` (IPv4) -- no
-        // matter how many disks are attached.
-        let mut args: Vec<String> = Vec::new();
-        macro_rules! arg {
-            ($($a:expr),+ $(,)?) => {{ $(args.push($a.to_string());)+ }};
-        }
-        // Allocate PCIe root-port slots 0x1, 0x2, ... on `pcie.0` in call order.
-        // Increment-then-read so every write is read in the same expansion (no
-        // dead final assignment).
-        let mut next_slot: u32 = 0;
-        macro_rules! root_port {
-            () => {{
-                next_slot += 1;
-                let slot = next_slot;
-                let id = format!("rp{slot}");
-                arg!(
-                    "-device",
-                    format!("pcie-root-port,id={id},bus=pcie.0,chassis={slot},addr=0x{slot:x}")
-                );
-                id
-            }};
-        }
-
-        arg!("-name", format!("guest={domain_name}"));
-        arg!("-machine", "q35,accel=kvm");
-        arg!("-cpu", "host");
-        arg!("-m", format!("size={}k", spec.memory_ki_b));
-        arg!("-smp", spec.v_cpus.to_string());
-        arg!("-uuid", uuid);
-        arg!("-rtc", "base=utc");
-        arg!("-nodefaults");
-        arg!("-no-user-config");
-        arg!("-display", "none");
-        // Split OVMF firmware: read-only code + writable per-VM varstore.
-        arg!(
-            "-drive",
-            format!("if=pflash,format=raw,unit=0,readonly=on,file={OVMF_CODE}")
-        );
-        arg!(
-            "-drive",
-            format!("if=pflash,format=raw,unit=1,file={}", ovmf_vars.display())
-        );
-
-        // Primary NIC on the first root port -> guest `enp1s0`.
-        let rp = root_port!();
-        arg!(
-            "-netdev",
-            format!("tap,id=net0,ifname={tap},script=no,downscript=no")
-        );
-        arg!(
-            "-device",
-            format!("virtio-net-pci,netdev=net0,mac={mac},bus={rp},addr=0x0")
-        );
-        // Optional IPv4 NIC on the second root port -> guest `enp2s0`.
-        if has_ipv4 {
-            let rp = root_port!();
-            arg!(
-                "-netdev",
-                format!("tap,id=net1,ifname={tap_ipv4},script=no,downscript=no")
-            );
-            arg!(
-                "-device",
-                format!("virtio-net-pci,netdev=net1,mac={mac_ipv4},bus={rp},addr=0x0")
-            );
-        }
-
-        // Primary boot disk (qcow2 overlay), then any extra (raw) disks. Disks go
-        // on later root ports so they never take the NICs' bus numbers.
-        let rp = root_port!();
-        arg!(
-            "-drive",
-            format!(
-                "if=none,id=disk0,file={},format=qcow2,cache=none,discard=unmap",
-                primary_disk.display()
-            )
-        );
-        arg!(
-            "-device",
-            format!("virtio-blk-pci,drive=disk0,bus={rp},addr=0x0,bootindex=1")
-        );
-        for (i, p) in extra.iter().enumerate() {
-            let rp = root_port!();
-            arg!(
-                "-drive",
-                format!(
-                    "if=none,id=disk{n},file={file},format=raw,cache=none,discard=unmap",
-                    n = i + 1,
-                    file = p.display()
-                )
-            );
-            arg!(
-                "-device",
-                format!("virtio-blk-pci,drive=disk{n},bus={rp},addr=0x0", n = i + 1)
-            );
-        }
-
-        // virtio-balloon and virtio-rng, each on its own root port.
-        let rp = root_port!();
-        arg!("-device", format!("virtio-balloon-pci,bus={rp},addr=0x0"));
-        let rp = root_port!();
-        arg!("-object", "rng-random,id=rng0,filename=/dev/urandom");
-        arg!(
-            "-device",
-            format!("virtio-rng-pci,rng=rng0,bus={rp},addr=0x0")
-        );
-
-        // Serial console -> `console.log` with `append=on`, so the log survives
-        // VM restarts (guest reboots and `vm().kill()` + `vm().start()`) and
-        // `log_consoles_task` can simply tail it.
-        arg!(
-            "-chardev",
-            format!("file,id=serial0,path={},append=on", console_log.display())
-        );
-        arg!("-device", "isa-serial,chardev=serial0");
-
-        // QMP control socket (used by `reboot_vm`), pid-file, and daemonize so
-        // the VM outlives the launching process (a forked task subprocess may
-        // start it, yet it must keep running afterwards). No
-        // `-no-reboot`/`-no-shutdown`, so a guest reboot resets the VM and a
-        // guest poweroff exits QEMU.
-        arg!(
-            "-qmp",
-            format!("unix:{},server=on,wait=off", qmp_path.display())
-        );
-        arg!("-pidfile", pid_path.display().to_string());
-        arg!("-daemonize");
+        let console_log = vm_dir.join("console.log");
+        let domain_name = Self::domain_name(group_name, vm_name);
+        let args = qemu_args(&QemuLaunch {
+            domain_name: domain_name.clone(),
+            uuid: vm_uuid(group_name, vm_name),
+            spec: &meta.spec,
+            ovmf_vars: ovmf_vars.display().to_string(),
+            tap,
+            mac: vm_mac(group_name, vm_name),
+            ipv4: meta
+                .has_ipv4
+                .then(|| (tap_ipv4, vm_mac_ipv4(group_name, vm_name))),
+            primary_disk: primary_disk.display().to_string(),
+            extra_disks: meta
+                .extra_disks
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect(),
+            console_log: console_log.display().to_string(),
+            qmp: qmp_path.display().to_string(),
+            pid: pid_path.display().to_string(),
+            mtu,
+        });
 
         info!(
             self.logger,
@@ -1210,9 +1203,103 @@ impl LocalBackend {
         Ok(())
     }
 
-    /// Destroy the QEMU process backing `vm_name`, if running.
-    pub fn destroy_vm(&self, _group_name: &str, vm_name: &str) -> Result<()> {
+    /// Start `vm_name` on the remote host `target` (multi-host mode). The VM is
+    /// prepared there exactly as [`start_local_vm`](Self::start_local_vm) does
+    /// here: the base image is sent once and cached, the VM gets its own qcow2
+    /// overlay, varstore and TAP(s) on that host's group bridge, and its serial
+    /// console is mirrored into the local `console.log`.
+    fn start_remote_vm(
+        &self,
+        group_name: &str,
+        vm_name: &str,
+        target: &str,
+        meta: &PersistedVm,
+    ) -> Result<()> {
+        let (base, size) = self.base_and_overlay_size(vm_name, meta)?;
+        let remote_base = multihost::ensure_remote_base(
+            target,
+            &base,
+            &self.active_local_backend.working_dir,
+            &self.logger,
+        )?;
+        let bridge = Self::bridge_name(group_name);
+        let rdir = multihost::remote_vm_dir(&bridge, &sanitize_name(vm_name));
+
+        // Config disks are small; send each one on first boot.
+        let mut extra_disks = Vec::with_capacity(meta.extra_disks.len());
+        for (i, local) in meta.extra_disks.iter().enumerate() {
+            let remote = format!("{rdir}/extra-{i}.img");
+            multihost::upload_if_missing(target, local, &remote)?;
+            extra_disks.push(remote);
+        }
+
+        let tap = Self::tap_name(group_name, vm_name);
+        let tap_ipv4 = Self::tap_name_ipv4(group_name, vm_name);
+        let mtu = multihost::overlay_mtu();
+        let console_log = format!("{rdir}/console.log");
+        let pid = format!("{rdir}/qemu.pid");
+        let qmp = multihost::remote_qmp_path(&rdir);
+        let domain_name = Self::domain_name(group_name, vm_name);
+        let args = qemu_args(&QemuLaunch {
+            domain_name: domain_name.clone(),
+            uuid: vm_uuid(group_name, vm_name),
+            spec: &meta.spec,
+            ovmf_vars: format!("{rdir}/OVMF_VARS.fd"),
+            tap: tap.clone(),
+            mac: vm_mac(group_name, vm_name),
+            ipv4: meta
+                .has_ipv4
+                .then(|| (tap_ipv4.clone(), vm_mac_ipv4(group_name, vm_name))),
+            primary_disk: format!("{rdir}/primary.qcow2"),
+            extra_disks,
+            console_log: console_log.clone(),
+            qmp: qmp.clone(),
+            pid: pid.clone(),
+            mtu: Some(mtu),
+        });
+        let mut taps = vec![tap.as_str()];
+        if meta.has_ipv4 {
+            taps.push(tap_ipv4.as_str());
+        }
+        let script = multihost::remote_start_script(&multihost::RemoteStart {
+            vm_dir: &rdir,
+            base: &remote_base,
+            overlay_size: size.as_deref(),
+            bridge: &bridge,
+            taps,
+            mtu,
+            ovmf_vars_template: OVMF_VARS_TEMPLATE,
+            pid: &pid,
+            qmp: &qmp,
+            qemu_args: &args,
+        });
+        info!(
+            self.logger,
+            "Launching QEMU for {domain_name} on {target}";
+            "pidfile" => %pid, "console" => %console_log
+        );
+        multihost::ssh_script(target, &script)
+            .with_context(|| format!("starting VM {domain_name} on {target}"))?;
+
         let vm_dir = self.vm_dir(vm_name);
+        std::fs::create_dir_all(&vm_dir)?;
+        multihost::follow_remote_console(
+            target,
+            &console_log,
+            &vm_dir.join("console.log"),
+            &vm_dir.join(CONSOLE_FOLLOWER_PID),
+        )
+    }
+
+    /// Destroy the QEMU process backing `vm_name`, if running.
+    pub fn destroy_vm(&self, group_name: &str, vm_name: &str) -> Result<()> {
+        let vm_dir = self.vm_dir(vm_name);
+        if let Some(target) = self.read_vm_meta(vm_name).ok().and_then(|m| m.host) {
+            multihost::stop_console_follower(&vm_dir.join(CONSOLE_FOLLOWER_PID));
+            let rdir =
+                multihost::remote_vm_dir(&Self::bridge_name(group_name), &sanitize_name(vm_name));
+            return multihost::remote_stop_qemu(&target, &format!("{rdir}/qemu.pid"));
+        }
         self.stop_qemu(&Self::qemu_pid_path(&vm_dir));
         Ok(())
     }
@@ -1229,6 +1316,26 @@ impl LocalBackend {
     /// If the guest does not power down within the grace period (e.g. it ignores
     /// the ACPI event), force-stop it so the reboot still makes progress.
     pub fn reboot_vm(&self, group_name: &str, vm_name: &str) -> Result<()> {
+        if let Some(target) = self.read_vm_meta(vm_name).ok().and_then(|m| m.host) {
+            let rdir =
+                multihost::remote_vm_dir(&Self::bridge_name(group_name), &sanitize_name(vm_name));
+            let pid = format!("{rdir}/qemu.pid");
+            multihost::remote_qmp(
+                &target,
+                &multihost::remote_qmp_path(&rdir),
+                "system_powerdown",
+            )
+            .with_context(|| format!("sending ACPI powerdown to VM {vm_name} on {target}"))?;
+            if !multihost::remote_await_exit(&target, &pid, Duration::from_secs(60)) {
+                warn!(
+                    self.logger,
+                    "VM {vm_name} on {target} did not power down gracefully within 60s; force-stopping"
+                );
+                multihost::remote_stop_qemu(&target, &pid)?;
+            }
+            return self.start_vm(group_name, vm_name);
+        }
+
         let vm_dir = self.vm_dir(vm_name);
         let pid_path = Self::qemu_pid_path(&vm_dir);
         let qmp_path = Self::qmp_socket_path(&vm_dir);
@@ -1315,6 +1422,163 @@ impl LocalBackend {
         serde_json::from_slice(&json)
             .with_context(|| format!("deserializing VM metadata {}", path.display()))
     }
+}
+
+/// Everything that differs between VMs (and between a local and a remote launch)
+/// in the QEMU command line built by [`qemu_args`]. Paths are as seen on the host
+/// QEMU runs on.
+struct QemuLaunch<'a> {
+    domain_name: String,
+    uuid: String,
+    spec: &'a VmSpec,
+    ovmf_vars: String,
+    tap: String,
+    mac: MacAddr6,
+    /// Second (IPv4) NIC: its TAP and MAC.
+    ipv4: Option<(String, MacAddr6)>,
+    primary_disk: String,
+    extra_disks: Vec<String>,
+    console_log: String,
+    qmp: String,
+    pid: String,
+    /// Guest MTU advertised through virtio-net `host_mtu` (multi-host overlay).
+    mtu: Option<u32>,
+}
+
+/// The QEMU command line for one VM.
+///
+/// `arg!` appends space-separated tokens; every virtio/PCIe device is placed
+/// behind its own `pcie-root-port` on `pcie.0` (allocated by `root_port!`, one
+/// slot each in ascending order). The guest assigns PCI bus numbers to the root
+/// ports in slot order, so putting the NIC(s) on the FIRST root port(s) makes the
+/// guest name them deterministically -- `enp1s0` (primary) and `enp2s0` (IPv4) --
+/// no matter how many disks are attached.
+fn qemu_args(l: &QemuLaunch) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
+    macro_rules! arg {
+        ($($a:expr),+ $(,)?) => {{ $(args.push($a.to_string());)+ }};
+    }
+    // Allocate PCIe root-port slots 0x1, 0x2, ... on `pcie.0` in call order.
+    // Increment-then-read so every write is read in the same expansion (no
+    // dead final assignment).
+    let mut next_slot: u32 = 0;
+    macro_rules! root_port {
+        () => {{
+            next_slot += 1;
+            let slot = next_slot;
+            let id = format!("rp{slot}");
+            arg!(
+                "-device",
+                format!("pcie-root-port,id={id},bus=pcie.0,chassis={slot},addr=0x{slot:x}")
+            );
+            id
+        }};
+    }
+    let host_mtu = l.mtu.map(|m| format!(",host_mtu={m}")).unwrap_or_default();
+
+    arg!("-name", format!("guest={}", l.domain_name));
+    arg!("-machine", "q35,accel=kvm");
+    arg!("-cpu", "host");
+    arg!("-m", format!("size={}k", l.spec.memory_ki_b));
+    arg!("-smp", l.spec.v_cpus.to_string());
+    arg!("-uuid", l.uuid);
+    arg!("-rtc", "base=utc");
+    arg!("-nodefaults");
+    arg!("-no-user-config");
+    arg!("-display", "none");
+    // Split OVMF firmware: read-only code + writable per-VM varstore.
+    arg!(
+        "-drive",
+        format!("if=pflash,format=raw,unit=0,readonly=on,file={OVMF_CODE}")
+    );
+    arg!(
+        "-drive",
+        format!("if=pflash,format=raw,unit=1,file={}", l.ovmf_vars)
+    );
+
+    // Primary NIC on the first root port -> guest `enp1s0`.
+    let rp = root_port!();
+    arg!(
+        "-netdev",
+        format!("tap,id=net0,ifname={},script=no,downscript=no", l.tap)
+    );
+    arg!(
+        "-device",
+        format!(
+            "virtio-net-pci,netdev=net0,mac={},bus={rp},addr=0x0{host_mtu}",
+            l.mac
+        )
+    );
+    // Optional IPv4 NIC on the second root port -> guest `enp2s0`.
+    if let Some((tap_ipv4, mac_ipv4)) = &l.ipv4 {
+        let rp = root_port!();
+        arg!(
+            "-netdev",
+            format!("tap,id=net1,ifname={tap_ipv4},script=no,downscript=no")
+        );
+        arg!(
+            "-device",
+            format!("virtio-net-pci,netdev=net1,mac={mac_ipv4},bus={rp},addr=0x0{host_mtu}")
+        );
+    }
+
+    // Primary boot disk (qcow2 overlay), then any extra (raw) disks. Disks go
+    // on later root ports so they never take the NICs' bus numbers.
+    let rp = root_port!();
+    arg!(
+        "-drive",
+        format!(
+            "if=none,id=disk0,file={},format=qcow2,cache=none,discard=unmap",
+            l.primary_disk
+        )
+    );
+    arg!(
+        "-device",
+        format!("virtio-blk-pci,drive=disk0,bus={rp},addr=0x0,bootindex=1")
+    );
+    for (i, p) in l.extra_disks.iter().enumerate() {
+        let rp = root_port!();
+        arg!(
+            "-drive",
+            format!(
+                "if=none,id=disk{n},file={p},format=raw,cache=none,discard=unmap",
+                n = i + 1
+            )
+        );
+        arg!(
+            "-device",
+            format!("virtio-blk-pci,drive=disk{n},bus={rp},addr=0x0", n = i + 1)
+        );
+    }
+
+    // virtio-balloon and virtio-rng, each on its own root port.
+    let rp = root_port!();
+    arg!("-device", format!("virtio-balloon-pci,bus={rp},addr=0x0"));
+    let rp = root_port!();
+    arg!("-object", "rng-random,id=rng0,filename=/dev/urandom");
+    arg!(
+        "-device",
+        format!("virtio-rng-pci,rng=rng0,bus={rp},addr=0x0")
+    );
+
+    // Serial console -> `console.log` with `append=on`, so the log survives
+    // VM restarts (guest reboots and `vm().kill()` + `vm().start()`) and
+    // `log_consoles_task` can simply tail it.
+    arg!(
+        "-chardev",
+        format!("file,id=serial0,path={},append=on", l.console_log)
+    );
+    arg!("-device", "isa-serial,chardev=serial0");
+
+    // QMP control socket (used by `reboot_vm`), pid-file, and daemonize so
+    // the VM outlives the launching process (a forked task subprocess may
+    // start it, yet it must keep running afterwards). No
+    // `-no-reboot`/`-no-shutdown`, so a guest reboot resets the VM and a
+    // guest poweroff exits QEMU.
+    arg!("-qmp", format!("unix:{},server=on,wait=off", l.qmp));
+    arg!("-pidfile", l.pid);
+    arg!("-daemonize");
+    args
 }
 
 /// Deterministic MAC address for a `(group, vm)` pair.
